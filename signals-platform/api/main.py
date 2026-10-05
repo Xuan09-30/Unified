@@ -1,6 +1,6 @@
 # api/main.py
 from fastapi import FastAPI
-from api.routers import ecom, markets_dev # <--- Ensure markets_dev is imported here
+from api.routers import ecom, markets_dev, spotify # <--- Add spotify here
 
 app = FastAPI(
     title="Signals Platform API",
@@ -10,7 +10,8 @@ app = FastAPI(
 
 # Register domain routers
 app.include_router(ecom.router, prefix="/api/v1")
-app.include_router(markets_dev.router, prefix="/api/v1") # <--- Ensure this line is added
+app.include_router(markets_dev.router, prefix="/api/v1")
+app.include_router(spotify.router, prefix="/api/v1") # <--- Add this line
 
 @app.get("/health")
 def health_check():

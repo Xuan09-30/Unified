@@ -30,7 +30,7 @@ if domain == "E-Commerce Analytics":
     if res_monthly.status_code == 200:
         df_monthly = pd.DataFrame(res_monthly.json())
         fig = px.bar(df_monthly, x="sale_month", y="monthly_revenue", title="Monthly Revenue Trend (BRL)")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch") # Fixed warning here
 
 elif domain == "Markets vs Dev":
     st.header("Developer Momentum vs Financial Valuation")
@@ -39,31 +39,47 @@ elif domain == "Markets vs Dev":
     res_signals = requests.get(f"{API_BASE}/markets-dev/weekly-signals")
     if res_signals.status_code == 200:
         df_signals = pd.DataFrame(res_signals.json())
-        
-        # Create a dropdown to select the asset pair
-        asset_pairs = df_signals['repo_name'].unique()
-        selected_repo = st.selectbox("Select Repository / Asset Pair", asset_pairs)
-        
-        # Filter dataframe for the selected pair
-        df_filtered = df_signals[df_signals['repo_name'] == selected_repo]
-        ticker_name = df_filtered['ticker'].iloc[0]
-        
-        # Create a dual-axis chart
-        fig = make_subplots(specs=[[{"secondary_y": True}]])
-        
-        # Add Market Price line
-        fig.add_trace(
-            go.Scatter(x=df_filtered['week_starting'], y=df_filtered['avg_price'], name=f"{ticker_name} Price", line=dict(color='blue', width=2)),
-            secondary_y=False,
-        )
-        # Add Commit Count bar chart
-        fig.add_trace(
-            go.Bar(x=df_filtered['week_starting'], y=df_filtered['commit_count'], name="Weekly Commits", marker_color='rgba(255, 165, 0, 0.5)'),
-            secondary_y=True,
-        )
-        
-        fig.update_layout(title_text=f"Correlation: {selected_repo} vs {ticker_name}", hovermode="x unified")
-        fig.update_yaxes(title_text="<b>Asset Price (USD)</b>", secondary_y=False)
-        fig.update_yaxes(title_text="<b>Commit Count</b>", secondary_y=True, showgrid=False)
-        
-        st.plotly_chart(fig, use_container_width=True)
+        if not df_signals.empty:
+            asset_pairs = df_signals['repo_name'].unique()
+            selected_repo = st.selectbox("Select Repository / Asset Pair", asset_pairs)
+            
+            df_filtered = df_signals[df_signals['repo_name'] == selected_repo]
+            ticker_name = df_filtered['ticker'].iloc[0]
+            
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            fig.add_trace(go.Scatter(x=df_filtered['week_starting'], y=df_filtered['avg_price'], name=f"{ticker_name} Price", line=dict(color='blue', width=2)), secondary_y=False)
+            fig.add_trace(go.Bar(x=df_filtered['week_starting'], y=df_filtered['commit_count'], name="Weekly Commits", marker_color='rgba(255, 165, 0, 0.5)'), secondary_y=True)
+            
+            fig.update_layout(title_text=f"Correlation: {selected_repo} vs {ticker_name}", hovermode="x unified")
+            fig.update_yaxes(title_text="<b>Asset Price (USD)</b>", secondary_y=False)
+            fig.update_yaxes(title_text="<b>Commit Count</b>", secondary_y=True, showgrid=False)
+            
+            st.plotly_chart(fig, width="stretch") # Fixed warning here
+        else:
+            st.warning("No data available. Please check the ingestion pipeline.")
+
+elif domain == "Quantified Self":
+    st.header("Quantified Self: Spotify Listening Habits")
+    st.markdown("Visualizing your top tracks perfectly ranked by your personal affinity and listening frequency.")
+    
+    res_spotify = requests.get(f"{API_BASE}/spotify/top-tracks")
+    if res_spotify.status_code == 200:
+        df_spotify = pd.DataFrame(res_spotify.json())
+        if not df_spotify.empty:
+            df_spotify['label'] = df_spotify['track_name'] + " - " + df_spotify['artist_name']
+            df_spotify = df_spotify.sort_values(by="popularity", ascending=True)
+            
+            fig = px.bar(
+                df_spotify, 
+                x="popularity", 
+                y="label", 
+                orientation='h',
+                title="Top Tracks by Personal Affinity Score",
+                color="popularity",
+                color_continuous_scale="Viridis",
+                labels={"popularity": "Affinity Score", "label": ""}
+            )
+            fig.update_layout(height=800)
+            st.plotly_chart(fig, width="stretch") # Fixed warning here
+        else:
+            st.warning("No track data found. Run the Spotify ingestion script.")

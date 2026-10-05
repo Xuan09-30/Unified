@@ -18,7 +18,6 @@ def get_weekly_signals():
             GROUP BY ticker, DATE_TRUNC('week', trade_date)
         ),
         repo_mapping AS (
-            -- Create a temporary mapping table to link repositories to financial tickers
             SELECT 'ethereum/go-ethereum' AS repo_name, 'ETH-USD' AS ticker UNION ALL
             SELECT 'solana-labs/solana', 'SOL-USD' UNION ALL
             SELECT 'microsoft/vscode', 'MSFT' UNION ALL
@@ -32,7 +31,8 @@ def get_weekly_signals():
             m.avg_price
         FROM github.commit_activity g
         JOIN repo_mapping rm ON g.repo_name = rm.repo_name
-        JOIN market_weekly m ON rm.ticker = m.ticker AND g.week_starting = m.week_starting
+        -- FIX: Add 1 day to GitHub's Sunday timestamp so it matches Postgres's Monday timestamp
+        JOIN market_weekly m ON rm.ticker = m.ticker AND (g.week_starting + INTERVAL '1 day')::date = m.week_starting
         ORDER BY g.repo_name, g.week_starting ASC;
     """
     with get_db_connection() as conn:
